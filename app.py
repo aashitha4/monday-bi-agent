@@ -7,16 +7,28 @@ import os
 
 # --- 1. CONFIGURATION (Environment Variables) ---
 # We use os.environ.get() to pull secrets from the hosting platform
-MONDAY_TOKEN = os.environ.get("MONDAY_TOKEN")
-DEALS_BOARD_ID = os.environ.get("DEALS_BOARD_ID")
-WO_BOARD_ID = os.environ.get("WO_BOARD_ID")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+# --- 1. CONFIGURATION (Universal Secret Loader) ---
 
-# Fail fast if keys are missing (prevents confusing errors later)
+def get_secret(key):
+    """Retrieves secrets from Streamlit Cloud OR Environment Variables (Local/Vercel)"""
+    # 1. Try Streamlit Secrets (Best for Streamlit Cloud)
+    if key in st.secrets:
+        return st.secrets[key]
+    # 2. Try OS Environment Variables (Best for Vercel / Local .env)
+    return os.environ.get(key)
+
+# Load the keys
+MONDAY_TOKEN = get_secret("MONDAY_TOKEN")
+DEALS_BOARD_ID = get_secret("DEALS_BOARD_ID")
+WO_BOARD_ID = get_secret("WO_BOARD_ID")
+GROQ_API_KEY = get_secret("GROQ_API_KEY")
+
+# Fail fast if keys are missing
 if not MONDAY_TOKEN or not GROQ_API_KEY:
-    st.error("🚨 Critical Error: Environment variables are missing.")
+    st.error(f"🚨 Critical Error: Secrets are missing. Please add MONDAY_TOKEN and GROQ_API_KEY to your configuration.")
     st.stop()
 
+# Initialize Client
 client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=GROQ_API_KEY)
 
 # --- 2. ROBUST DATA FETCHING & CLEANING ---
@@ -153,4 +165,5 @@ if 'deals_df' in st.session_state:
     with st.expander("📂 View Raw Data"):
         st.dataframe(st.session_state['deals_df'])
 else:
+
     st.info("👋 Click 'Sync Live Data' to begin.")
